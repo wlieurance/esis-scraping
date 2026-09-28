@@ -74,6 +74,7 @@ def load_veg(con, csvpath):
     # con.close()
 
 
+# deprecated as of USDA plants update circa 2021
 def grab_usda_plants(con):
     # con = sqlite.connect(db)
     c = con.cursor()
@@ -113,6 +114,46 @@ def grab_usda_plants(con):
             i.execute(isql, l_list)
     con.commit()
     # con.close()
+
+
+def grab_plants(con, plant_db):
+    c = con.cursor()
+    c.execute("""
+    CREATE TABLE plants(
+        symbol TEXT PRIMARY KEY,
+        accepted_symbol TEXT,
+        synonym_symbol TEXT,
+        scientific_name TEXT,
+        hybrid_genus_indicator TEXT,
+        genus TEXT,
+        hybrid_species_indicator TEXT,
+        species TEXT,
+        subspecies_prefix TEXT,
+        hybrid_subspecies_indicator TEXT,
+        subspecies TEXT,
+        variety_prefix TEXT,
+        hybrid_variety_indicator TEXT,
+        variety TEXT,
+        subvariety_prefix TEXT,
+        subvariety TEXT,
+        forma_prefix TEXT,
+        forma TEXT,
+        genera_binomial_author TEXT,
+        trinomial_author TEXT,
+        quadranomial_author TEXT,
+        questionable_taxon_indicator TEXT,
+        parents TEXT,
+        common_name TEXT,
+        state_and_province TEXT,
+        family TEXT,
+        duration TEXT,
+        growth_habit TEXT,
+        native_status TEXT);
+    """)
+    c.execute(f"ATTACH '{plant_db}' AS plant;")
+    c.execute("INSERT INTO main.plants SELECT * FROM plant.plants;")
+    # c.execute("DETACH plant;")
+    con.commit()
 
 
 def replace_veg_code(con):
@@ -167,6 +208,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('csvpath', help='the file path for a csv output produced by the grab_names.py script')
     parser.add_argument('outfile', help='file path to which the converted data will be saved (.csv, .json)')
+    parser.add_argument('plant_db', help='file path to sqlite db with PLANTS info.')
     parser.add_argument('-d', '--db', help='the file path to the sqlite database to which the processing results will '
                                            'be saved', default=':memory:')
     args = parser.parse_args()
@@ -178,7 +220,8 @@ if __name__ == "__main__":
     con = sqlite.connect(args.db)
     c = con.cursor()
     load_veg(con, args.csvpath)
-    grab_usda_plants(con)
+    # grab_usda_plants(con)
+    grab_plants(con, args.plant_db)
     replace_veg_code(con)
 
     print("writing results to file...")
